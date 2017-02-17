@@ -197,7 +197,11 @@ public :
 
 	NYCube * pick(NYVert3Df pos, NYVert3Df  dir, NYPoint3D * point)
 	{
-		if(getRayCollisionWithCube(pos, dir, &point, ))
+		NYVert3Df cubePos;
+		if (getRayCollisionWithCube(pos, dir, point->X, point->Y, point->Z, cubePos)) {
+			getCube(cubePos.X, cubePos.Y, cubePos.Z)->_Type = CUBE_AIR;
+			updateCube(cubePos.X, cubePos.Y, cubePos.Z);
+		}
 		return NULL;
 	}
 
@@ -211,8 +215,6 @@ public :
 
 	void render_world_vbo(void)
 	{
-
-
 		for(int x=0;x<MAT_SIZE;x++)
 			for(int y=0;y<MAT_SIZE;y++)
 				for(int z=0;z<MAT_HEIGHT;z++)
@@ -513,8 +515,6 @@ public :
 		int x, int y, int z,
 		NYVert3Df & inter)
 	{
-
-
 		float minDist = -1;
 		NYVert3Df interTemp;
 
