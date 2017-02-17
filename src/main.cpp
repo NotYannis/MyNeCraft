@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <windows.h>
+#include <ctime>
 
 #include "external/gl/glew.h"
 #include "external/gl/freeglut.h"
@@ -14,6 +15,9 @@
 #include "engine/render/renderer.h"
 #include "engine/gui/screen.h"
 #include "engine/gui/screen_manager.h"
+
+#include "world.h"
+#include "avatar.h"
 
 
 NYRenderer * g_renderer = NULL;
@@ -34,6 +38,24 @@ GUIScreen * g_screen_params = NULL;
 GUIScreen * g_screen_jeu = NULL;
 GUISlider * g_slider;
 
+//Timer for day passed
+time_t g_startTime;
+time_t g_currentTime;
+float g_timeElasped;
+
+float currentHour = 0.f;
+float timeSpeed = 0.000f;
+float startDay = 0.f;
+float startNight = 12.0f;
+
+NYVert3Df sunPos;
+float sunAngle = 0.0f;
+
+NYColor skyColor = NYColor(44.f / 255.f, 225.f / 255.f, 219.f / 255.f, 1);
+
+//Variable globale
+NYWorld * g_world;
+NYAvatar * g_avatar;
 
 //////////////////////////////////////////////////////////////////////////
 // GESTION APPLICATION
@@ -54,8 +76,15 @@ void update(void)
 		g_nb_frames = 0;
 	}
 
+	LabelCam->Text = std::string("Cam X : ") + toString(g_renderer->_Camera->_Position.X) + 
+						std::string(", Y : ") + toString(g_renderer->_Camera->_Position.Y) + 
+						std::string(", Z : ") + toString(g_renderer->_Camera->_Position.Z);
+
+	g_avatar->update(elapsed);
+
 	//Rendu
 	g_renderer->render(elapsed);
+
 }
 
 
@@ -81,45 +110,50 @@ void renderObjects(void)
 	glVertex3d(0,0,10000);
 	glEnd();
 
-	glRotatef(NYRenderer::_DeltaTimeCumul * 100,
-		g_slider->Value*10.0f, 1, cos(NYRenderer::_DeltaTimeCumul));
+	glBegin(GL_LINES);
+	glColor3d(1, 0, 0);
+	glVertex3d(g_renderer->_Camera->_Position.X - 0.01, g_renderer->_Camera->_Position.Y, g_renderer->_Camera->_Position.Z);
+	glVertex3d(g_renderer->_Camera->_Direction.X * 2, g_renderer->_Camera->_Direction.Y * 2, g_renderer->_Camera->_Direction.Z * 2);
+	glEnd();
 
 	//On desactive le back face culling
 	glDisable(GL_CULL_FACE);
+	//On active l'illumination 
+	glEnable(GL_LIGHTING);
 
 
-	glBegin(GL_QUADS);
+	/*glBegin(GL_QUADS);
 
-	glColor3d(1, 0, 0);
-	glVertex3d(-1, -1, -1);
-	glVertex3d(1, -1, -1);
-	glVertex3d(1, -1, 1);
-	glVertex3d(-1, -1, 1);
+	//Speculaire
+	GLfloat whiteSpecularMaterial[] = { 0.3, 0.3, 0.3, 1.0 };
+	GLfloat mShininess = 100;
 
-	glColor3d(1, 0, 0);
-	glVertex3d(-1, 1, -1);
-	glVertex3d(1, 1, -1);
-	glVertex3d(1, 1, 1);
-	glVertex3d(-1, 1, 1);
+	//Emissive
+	GLfloat rEmissive[] = { 0.3, 0.0, 0.0, 1.0 };
+	GLfloat gEmissive[] = { 0.0, 0.3, 0.0, 1.0 };
+	GLfloat bEmissive[] = { 0.0, 0.0, 0.3, 1.0 };
 
-	glColor3d(0, 1, 0);
-	glVertex3d(-1, -1, -1);
-	glVertex3d(1, -1, -1);
-	glVertex3d(1, 1, -1);
-	glVertex3d(-1, 1, -1);
 
-	glColor3d(0, 1, 0);
-	glVertex3d(-1, -1, 1);
-	glVertex3d(1, -1, 1);
-	glVertex3d(1, 1, 1);
-	glVertex3d(-1, 1, 1);
+	//Diffuse
+	GLfloat rMaterialDiffuse[] = { 0.7, 0, 0, 1.0 };
+	GLfloat gMaterialDiffuse[] = { 0, 0.7, 0, 1.0 };
+	GLfloat bMaterialDiffuse[] = { 0, 0, 0.7, 1.0 };
 
-	glColor3d(0, 0, 1);
-	glVertex3d(1, -1, -1);
-	glVertex3d(1, -1, 1);
-	glVertex3d(1, 1, 1);
-	glVertex3d(1, 1, -1);
 
+	//Ambient
+	GLfloat rMaterialAmbient[] = { 0.2, 0, 0, 1.0 };
+	GLfloat gMaterialAmbient[] = { 0, 0.2, 0, 1.0 };
+	GLfloat bMaterialAmbient[] = { 0, 0, 0.2, 1.0 };
+
+	//Face 6
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, rMaterialDiffuse);
+	glMaterialfv(GL_FRONT, GL_AMBIENT, rMaterialAmbient);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, whiteSpecularMaterial);
+	glMaterialf(GL_FRONT, GL_SHININESS, mShininess);
+	glMaterialfv(GL_FRONT, GL_EMISSION, rEmissive);
+
+	//On set la normale
+	glNormal3f(-1, 0, 0);
 	glColor3d(0, 0, 1);
 	glVertex3d(-1, -1, -1);
 	glVertex3d(-1, -1, 1);
@@ -127,6 +161,41 @@ void renderObjects(void)
 	glVertex3d(-1, 1, -1);
 
 	glEnd();
+	*/
+
+	//Render the woooorld
+	glPushMatrix();
+	g_world->render_world_vbo();
+	glPopMatrix();
+
+	sunPos = NYVert3Df(200, -100, -50);
+	sunPos.rotate(NYVert3Df(0, 1, 0), sunAngle);
+
+	glPushMatrix();
+	glTranslatef(sunPos.X, sunPos.Y, sunPos.Z);
+
+	glutSolidCube(2);
+
+	sunAngle += timeSpeed;
+	if (sunAngle >= M_PI * 2) {
+		sunAngle = 0.0f;
+	}
+	glPopMatrix();
+
+
+
+	//Changement de la couleur de fond
+
+	//Time manager
+	currentHour = (sunAngle / (M_PI * 2)) * 24;
+	if (currentHour <= startNight) {
+		skyColor = skyColor.interpolate(NYColor(44.f / 255.f, 225.f / 255.f, 219.f / 255.f, 1), 0.1f);
+	}
+	if(currentHour > startNight){
+		skyColor = skyColor.interpolate(NYColor(7.f / 255.f, 2.f / 255.f, 65.f / 255.f, 1), 0.1f);
+	}
+	g_renderer->setBackgroundColor(skyColor);
+
 }
 
 void setLights(void)
@@ -134,15 +203,32 @@ void setLights(void)
 	//On active la light 0
 	glEnable(GL_LIGHT0);
 
-	//On définit une lumière directionelle (un soleil)
-	float direction[4] = {0,0,1,0}; ///w = 0 donc elle est a l'infini
-	glLightfv(GL_LIGHT0, GL_POSITION, direction );
-	float color[4] = {0.5f,0.5f,0.5f};
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, color );
-	float color2[4] = {0.3f,0.3f,0.3f};
-	glLightfv(GL_LIGHT0, GL_AMBIENT, color2 );
-	float color3[4] = {0.3f,0.3f,0.3f};
-	glLightfv(GL_LIGHT0, GL_SPECULAR, color3 );
+
+	//glEnable(GL_LIGHT1);
+	float position[4] = { sunPos.X, sunPos.Y, sunPos.Z, 0 }; // w = 1 donc c'est une point light (w=0 -> directionelle, point à l'infini)
+	glLightfv(GL_LIGHT0, GL_POSITION, position);
+
+
+
+	float diffuse[4] = { 0.5f,0.5f,0.5f };
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+
+
+	float specular[4] = { 0.5f,0.5f,0.5f };
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+
+
+	float ambient[4] = { 0.3f,0.3f,0.3f };
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+
+	float position2[4] = { -sunPos.X, -sunPos.Y, -sunPos.Z, 0 };
+	glLightfv(GL_LIGHT1, GL_POSITION, position2);
+
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, diffuse);
+
+	glLightfv(GL_LIGHT1, GL_SPECULAR, specular);
+
+	glLightfv(GL_LIGHT1, GL_AMBIENT, ambient);
 }
 
 void resizeFunction(int width, int height)
@@ -191,19 +277,55 @@ void keyboardDownFunction(unsigned char key, int p1, int p2)
 		}
 	}
 
-	if (key == 't') {
-		g_renderer->_Camera->setPosition(NYVert3Df(g_renderer->_Camera->_Position.X - 1, g_renderer->_Camera->_Position.Y, g_renderer->_Camera->_Position.Z));
-		g_renderer->_Camera->setLookAt(NYVert3Df(g_renderer->_Camera->_LookAt.X - 1, g_renderer->_Camera->_LookAt.Y, g_renderer->_Camera->_LookAt.Z));
+	if (key == 'z') {
+		g_avatar->avance = true;
+	}
+	if (key == 'd') {
+		g_avatar->droite = true;
+	}
+	if (key == 'q') {
+		g_avatar->gauche = true;
+	}
+	if (key == 's') {
+		g_avatar->recule = true;
+	}
+
+	if (key == VK_SPACE) {
+		g_avatar->Jump = true;
+	}
+	if (key == 'a') {
+		g_avatar->Crouch = true;
+	}
+	if (key == VK_LSHIFT) {
+		g_avatar->Run = true;
 	}
 }
 
 void keyboardUpFunction(unsigned char key, int p1, int p2)
 {
+	if (key == 'z') {
+		g_avatar->avance = false;
+	}
+	if (key == 'd') {
+		g_avatar->droite = false;
+	}
+	if (key == 'q') {
+		g_avatar->gauche = false;
+	}
+	if (key == 's') {
+		g_avatar->recule = false;
+	}
+	if (key == 'a') {
+		g_avatar->Crouch = false;
+	}
+	if (key == VK_LSHIFT) {
+		g_avatar->Run = false;
+	}
 }
 
 void mouseWheelFunction(int wheel, int dir, int x, int y)
 {
-	
+	g_renderer->_Camera->move(NYVert3Df(0, 0, dir));
 }
 
 void mouseFunction(int button, int state, int x, int y)
@@ -225,13 +347,58 @@ void mouseFunction(int button, int state, int x, int y)
 
 void mouseMoveFunction(int x, int y, bool pressed)
 {
+
+
 	bool mouseTraite = false;
 
 	mouseTraite = g_screen_manager->mouseCallback(x,y,g_mouse_btn_gui_state,0,0);
+	
 	if(pressed && mouseTraite)
 	{
 		//Mise a jour des variables liées aux sliders
 	}
+
+	static int lastx = -1;
+	static int lasty = -1;
+
+
+	int dx = x - lastx;
+	int dy = y - lasty;
+	//g_renderer->_ScreenWidth, g_renderer->_ScreenHeight
+	if (x < 100 || x > g_renderer->_ScreenWidth - 100 ||
+		y < 100 || y > g_renderer->_ScreenHeight - 100) {
+		glutWarpPointer(g_renderer->_ScreenWidth / 2, g_renderer->_ScreenHeight / 2);
+		lastx = g_renderer->_ScreenWidth / 2;
+		lasty = g_renderer->_ScreenHeight / 2;
+	}
+	else {
+		lastx = x;
+		lasty = y;
+	}
+
+	if (GetKeyState(VK_LCONTROL) & 0x80)
+	{
+		NYVert3Df strafe = g_renderer->_Camera->_NormVec;
+		strafe.Z = 0;
+		strafe.normalize();
+		strafe *= (float)-dx / 50.0f;
+
+		NYVert3Df avance = g_renderer->_Camera->_Direction;
+		avance.Z = 0;
+		avance.normalize();
+		avance *= (float)dy / 50.0f;
+
+		g_renderer->_Camera->move(avance + strafe);
+	}
+	else
+	{
+		g_renderer->_Camera->rotate((float)-dx / 300.0f);
+		g_renderer->_Camera->rotateUp((float)-dy / 300.0f);
+	}
+
+	if (pressed) {
+	}
+
 
 }
 
@@ -370,6 +537,15 @@ int main(int argc, char* argv[])
 	LabelFps->Visible = true;
 	g_screen_jeu->addElement(LabelFps);
 
+	y += BtnParams->Height + 1;
+
+	LabelCam = new GUILabel();
+	LabelCam->Text = "CamPos";
+	LabelCam->X = x;
+	LabelCam->Y = y;
+	LabelCam->Visible = true;
+	g_screen_jeu->addElement(LabelCam);
+
 	//Ecran de parametrage
 	x = 10;
 	y = 10;
@@ -406,19 +582,29 @@ int main(int argc, char* argv[])
 	g_screen_manager->setActiveScreen(g_screen_jeu);
 	
 	//Init Camera
-	g_renderer->_Camera->setPosition(NYVert3Df(10,10,10));
+	g_renderer->_Camera->setPosition(NYVert3Df(1000,1000,1000));
 	g_renderer->_Camera->setLookAt(NYVert3Df(0,0,0));
 	
 
+
+	//Init World
+	g_world = new NYWorld();
+	g_world->_FacteurGeneration = 5;
+	g_world->init_world();
+
+	g_avatar = new NYAvatar(g_renderer->_Camera, g_world);
 	//Fin init moteur
 
 	//Init application
 
+	glutSetCursor(GLUT_CURSOR_NONE);
 
 
 	//Init Timer
 	g_timer = new NYTimer();
 	
+	time(&g_startTime);
+
 	//On start
 	g_timer->start();
 
