@@ -182,8 +182,14 @@ public :
 
 					if (val < 1) 
 					{
-						//if (z > MAT_HEIGHT_CUBES - 10) z = MAT_HEIGHT_CUBES - 10;
-						getCube(x, y, z)->_Type = CUBE_TERRE;
+						if (z == MAT_HEIGHT_CUBES - 1)
+						{
+							getCube(x, y, z)->_Type = CUBE_EAU;
+						}
+						else
+						{
+							getCube(x, y, z)->_Type = CUBE_TERRE;
+						}
 					}
 				}
 
