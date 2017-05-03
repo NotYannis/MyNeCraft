@@ -162,8 +162,8 @@ public :
 			MAT_SIZE_CUBES-1,MAT_SIZE_CUBES-1,
 			0,MAT_SIZE_CUBES-1,1,profmax);	
 
-		float freq = 0.04;
-		float freq2 = 0.1;
+		float freq = 0.04f;
+		float freq2 = 0.1f;
 
 		for (int x = 0; x < MAT_SIZE_CUBES; ++x)	
 			for (int y = 0; y < MAT_SIZE_CUBES; ++y)
@@ -195,12 +195,16 @@ public :
 		add_world_to_vbo();
 	}
 
+
+
 	NYCube * pick(NYVert3Df pos, NYVert3Df  dir, NYPoint3D * point)
 	{
 		NYVert3Df cubePos;
 		if (getRayCollisionWithCube(pos, dir, point->X, point->Y, point->Z, cubePos)) {
-			getCube(cubePos.X, cubePos.Y, cubePos.Z)->_Type = CUBE_AIR;
-			updateCube(cubePos.X, cubePos.Y, cubePos.Z);
+			NYCube * find = getCube(cubePos.X, cubePos.Y, cubePos.Z);
+			return find;
+			//getCube(cubePos.X, cubePos.Y, cubePos.Z)->_Type = CUBE_AIR;
+			//updateCube(cubePos.X, cubePos.Y, cubePos.Z);
 		}
 		return NULL;
 	}
@@ -288,7 +292,7 @@ public :
 		//On fait chaque axe
 		NYAxis axis = 0x00;
 		valueColMin = oneShot ? 0.5 : 10000.0f;
-		float seuil = 0.00001;
+		float seuil = 0.00001f;
 		float prodScalMin = 1.0f;
 		if (dir.getMagnitude() > 1)
 			dir.normalize();
@@ -448,7 +452,7 @@ public :
 
 	bool getRayCollision(NYVert3Df & debSegment, NYVert3Df & finSegment,
 		NYVert3Df & inter,
-		int &xCube, int&yCube, int&zCube)
+		int &xCube, int &yCube, int &zCube)
 	{
 		float len = (finSegment - debSegment).getSize();
 
