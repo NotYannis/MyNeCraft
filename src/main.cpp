@@ -56,6 +56,7 @@ NYColor skyColor = NYColor(44.f / 255.f, 225.f / 255.f, 219.f / 255.f, 1);
 //Variable globale
 NYWorld * g_world;
 NYAvatar * g_avatar;
+GLuint g_program;
 
 //////////////////////////////////////////////////////////////////////////
 // GESTION APPLICATION
@@ -112,8 +113,8 @@ void renderObjects(void)
 
 	glBegin(GL_LINES);
 	glColor3d(1, 0, 0);
-	glVertex3d(g_renderer->_Camera->_Position.X - 0.01, g_renderer->_Camera->_Position.Y, g_renderer->_Camera->_Position.Z);
-	glVertex3d(g_renderer->_Camera->_Direction.X * 2, g_renderer->_Camera->_Direction.Y * 2, g_renderer->_Camera->_Direction.Z * 2);
+	//glVertex3d(g_renderer->_Camera->_Position.X - g_renderer->_Camera->_Direction.X - 0.01, g_renderer->_Camera->_Position.Y - g_renderer->_Camera->_Direction.Y, g_renderer->_Camera->_Position.Z - g_renderer->_Camera->_Direction.Z);
+	//glVertex3d(g_renderer->_Camera->_Direction.X * 2, g_renderer->_Camera->_Direction.Y * 2, g_renderer->_Camera->_Direction.Z * 2);
 	glEnd();
 
 	//On desactive le back face culling
@@ -164,11 +165,27 @@ void renderObjects(void)
 	*/
 
 	//Render the woooorld
+	glUseProgram(g_program);
+
+	GLuint elap = glGetUniformLocation(g_program, "elapsed");
+	glUniform1f(elap, NYRenderer::_DeltaTimeCumul);
+
+	GLuint amb = glGetUniformLocation(g_program, "ambientLevel");
+	glUniform1f(amb, 0.4);
+
+	GLuint invView = glGetUniformLocation(g_program, "invertView");
+	glUniformMatrix4fv(invView, 1, true, g_renderer->_Camera->_InvertViewMatrix.Mat.t);
+
+	NYFloatMatrix viewMat = g_renderer->_Camera->_InvertViewMatrix;
+	viewMat.invert();
+	GLuint view = glGetUniformLocation(g_program, "view");
+	glUniformMatrix4fv(view, 1, true, viewMat.Mat.t);
+
 	glPushMatrix();
 	g_world->render_world_vbo();
 	glPopMatrix();
 
-	sunPos = NYVert3Df(200, -100, -50);
+	sunPos = NYVert3Df(200, -100, 50);
 	sunPos.rotate(NYVert3Df(0, 1, 0), sunAngle);
 
 	glPushMatrix();
@@ -197,6 +214,8 @@ void renderObjects(void)
 	g_renderer->setBackgroundColor(skyColor);
 
 }
+
+
 
 void setLights(void)
 {
@@ -423,6 +442,7 @@ void clickBtnCloseParam (GUIBouton * bouton)
 	g_screen_manager->setActiveScreen(g_screen_jeu);
 }
 
+
 /**
   * POINT D'ENTREE PRINCIPAL
   **/
@@ -508,7 +528,10 @@ int main(int argc, char* argv[])
 	g_renderer->setRender2DFun(render2d);
 	g_renderer->setLightsFun(setLights);
 	g_renderer->setBackgroundColor(NYColor());
-	g_renderer->initialise();
+	g_renderer->initialise(true);
+
+	//Creation d'un programme de shader, avec vertex et fragment shaders
+	g_program = g_renderer->createProgram("shaders/psbase.glsl", "shaders/vsbase.glsl");
 
 	//On applique la config du renderer
 	glViewport(0, 0, g_renderer->_ScreenWidth, g_renderer->_ScreenHeight);
