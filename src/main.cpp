@@ -96,6 +96,7 @@ void render2d(void)
 
 void renderObjects(void)
 {
+	
 	//Rendu des axes
 	glDisable(GL_LIGHTING);
 
@@ -163,15 +164,22 @@ void renderObjects(void)
 
 	glEnd();
 	*/
-
+	
 	//Render the woooorld
 	glUseProgram(g_program);
 
+
+	//Pixel shader variables
+	GLuint amb = glGetUniformLocation(g_program, "ambientLevel");
+	glUniform1f(amb, 0.4);
+
+	GLuint radius = glGetUniformLocation(g_program, "radius");
+	glUniform1f(radius, 2);
+
+	//Vertex shader variables
 	GLuint elap = glGetUniformLocation(g_program, "elapsed");
 	glUniform1f(elap, NYRenderer::_DeltaTimeCumul);
 
-	GLuint amb = glGetUniformLocation(g_program, "ambientLevel");
-	glUniform1f(amb, 0.4);
 
 	GLuint invView = glGetUniformLocation(g_program, "invertView");
 	glUniformMatrix4fv(invView, 1, true, g_renderer->_Camera->_InvertViewMatrix.Mat.t);
@@ -185,13 +193,14 @@ void renderObjects(void)
 	g_world->render_world_vbo();
 	glPopMatrix();
 
-	sunPos = NYVert3Df(200, -100, 50);
-	sunPos.rotate(NYVert3Df(0, 1, 0), sunAngle);
+	sunPos = NYVert3Df(100, 50, 1000);
+	//sunPos.rotate(NYVert3Df(0, 1, 0), sunAngle);
 
 	glPushMatrix();
 	glTranslatef(sunPos.X, sunPos.Y, sunPos.Z);
 
-	glutSolidCube(2);
+	glutSetColor(0, 255, 255, 0);
+	glutSolidCube(20);
 
 	sunAngle += timeSpeed;
 	if (sunAngle >= M_PI * 2) {
@@ -212,7 +221,6 @@ void renderObjects(void)
 		skyColor = skyColor.interpolate(NYColor(7.f / 255.f, 2.f / 255.f, 65.f / 255.f, 1), 0.1f);
 	}
 	g_renderer->setBackgroundColor(skyColor);
-
 }
 
 
@@ -223,19 +231,15 @@ void setLights(void)
 	glEnable(GL_LIGHT0);
 
 
-	//glEnable(GL_LIGHT1);
+	glEnable(GL_LIGHT1);
 	float position[4] = { sunPos.X, sunPos.Y, sunPos.Z, 0 }; // w = 1 donc c'est une point light (w=0 -> directionelle, point à l'infini)
 	glLightfv(GL_LIGHT0, GL_POSITION, position);
-
-
 
 	float diffuse[4] = { 0.5f,0.5f,0.5f };
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 
-
 	float specular[4] = { 0.5f,0.5f,0.5f };
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
-
 
 	float ambient[4] = { 0.3f,0.3f,0.3f };
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
@@ -467,7 +471,7 @@ int main(int argc, char* argv[])
 	glEnable(GL_MULTISAMPLE);
 
 	Log::log(Log::ENGINE_INFO, (toString(argc) + " arguments en ligne de commande.").c_str());	
-	bool gameMode = true;
+	bool gameMode = false;
 	for(int i=0;i<argc;i++)
 	{
 		if(argv[i][0] == 'w')
@@ -531,7 +535,7 @@ int main(int argc, char* argv[])
 	g_renderer->initialise(true);
 
 	//Creation d'un programme de shader, avec vertex et fragment shaders
-	g_program = g_renderer->createProgram("shaders/psbase.glsl", "shaders/vsbase.glsl");
+	g_program = g_renderer->createProgram("../src/shaders/psbase.glsl", "../src/shaders/vsbase.glsl");
 
 	//On applique la config du renderer
 	glViewport(0, 0, g_renderer->_ScreenWidth, g_renderer->_ScreenHeight);

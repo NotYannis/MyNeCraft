@@ -27,6 +27,7 @@ public :
 	NYPerlin _Perlin;
 	NYPhysics _RayCast;
 	int _MatriceHeights[MAT_SIZE_CUBES][MAT_SIZE_CUBES];
+	int _MatriceHeightsTmp[MAT_SIZE_CUBES][MAT_SIZE_CUBES];
 	float _FacteurGeneration;
 
 	NYWorld()
@@ -67,8 +68,6 @@ public :
 
 					_Chunks[x][y][z]->setVoisins(cxPrev,cxNext,cyPrev,cyNext,czPrev,czNext);
 				}
-
-					
 	}
 
 	inline NYCube * getCube(int x, int y, int z)
@@ -117,6 +116,36 @@ public :
 	void load_pile(int x, int y, int height, bool onlyIfZero = true)
 	{
 
+		if (height < 1)
+			height = 1;
+		if (height >= MAT_HEIGHT_CUBES)
+			height = MAT_HEIGHT_CUBES - 1;
+
+		if (_MatriceHeights[x][y] != 0 && onlyIfZero)
+			return;
+
+		for (int z = 0; z<height; z++)
+		{
+			getCube(x, y, z)->_Draw = true;
+			if (z>0)
+				getCube(x, y, z)->_Type = CUBE_TERRE;
+			else
+				getCube(x, y, z)->_Type = CUBE_EAU;
+		}
+
+		if (height - 1>0)
+		{
+			getCube(x, y, height - 1)->_Draw = true;
+			getCube(x, y, height - 1)->_Type = CUBE_HERBE;
+		}
+
+		for (int z = height; z<MAT_HEIGHT_CUBES; z++)
+		{
+			getCube(x, y, z)->_Draw = true;
+			getCube(x, y, z)->_Type = CUBE_AIR;
+		}
+
+		_MatriceHeights[x][y] = height;
 	}
 
 	//Creation du monde entier, en utilisant le mouvement brownien fractionnaire
@@ -125,12 +154,118 @@ public :
 		int x3, int y3,
 		int x4, int y4, int prof, int profMax = -1)
 	{
-		
+		if ((x3 - x1) <= 1 && (y3 - y1) <= 1)
+			return;
+
+		int largeurRandom = (int)(MAT_HEIGHT_CUBES / (prof*_FacteurGeneration));
+		if (largeurRandom == 0)
+			largeurRandom = 1;
+
+		if (profMax >= 0 && prof >= profMax)
+		{
+			Log::log(Log::ENGINE_INFO, ("End of generation at prof " + toString(prof)).c_str());
+			return;
+		}
+
+		//On se met au milieu des deux coins du haut
+		int xa = (x1 + x2) / 2;
+		int ya = (y1 + y2) / 2;
+		int heighta = (_MatriceHeights[x1][y1] + _MatriceHeights[x2][y2]) / 2;
+		if ((x2 - x1)>1)
+		{
+			heighta += (rand() % largeurRandom) - (largeurRandom / 2);
+			load_pile(xa, ya, heighta);
+		}
+		else
+			heighta = _MatriceHeights[xa][ya];
+
+		//Au milieu des deux coins de droite
+		int xb = (x2 + x3) / 2;
+		int yb = (y2 + y3) / 2;
+		int heightb = (_MatriceHeights[x2][y2] + _MatriceHeights[x3][y3]) / 2;
+		if ((y3 - y2)>1)
+		{
+			heightb += (rand() % largeurRandom) - (largeurRandom / 2);
+			load_pile(xb, yb, heightb);
+		}
+		else
+			heightb = _MatriceHeights[xb][yb];
+
+		//Au milieu des deux coins du bas
+		int xc = (x3 + x4) / 2;
+		int yc = (y3 + y4) / 2;
+		int heightc = (_MatriceHeights[x3][y3] + _MatriceHeights[x4][y4]) / 2;
+		heightc += (rand() % largeurRandom) - (largeurRandom / 2);
+		if ((x3 - x4)>1)
+		{
+			load_pile(xc, yc, heightc);
+		}
+		else
+			heightc = _MatriceHeights[xc][yc];
+
+		//Au milieu des deux coins de gauche
+		int xd = (x4 + x1) / 2;
+		int yd = (y4 + y1) / 2;
+		int heightd = (_MatriceHeights[x4][y4] + _MatriceHeights[x1][y1]) / 2;
+		heightd += (rand() % largeurRandom) - (largeurRandom / 2);
+		if ((y3 - y1)>1)
+		{
+			load_pile(xd, yd, heightd);
+		}
+		else
+			heightd = _MatriceHeights[xd][yd];
+
+		//Au milieu milieu
+		int xe = xa;
+		int ye = yb;
+		if ((x3 - x1)>1 && (y3 - y1)>1)
+		{
+			int heighte = (heighta + heightb + heightc + heightd) / 4;
+			heighte += (rand() % largeurRandom) - (largeurRandom / 2);
+			load_pile(xe, ye, heighte);
+		}
+
+		//On genere les 4 nouveaux quads
+		generate_piles(x1, y1, xa, ya, xe, ye, xd, yd, prof + 1, profMax);
+		generate_piles(xa, ya, x2, y2, xb, yb, xe, ye, prof + 1, profMax);
+		generate_piles(xe, ye, xb, yb, x3, y3, xc, yc, prof + 1, profMax);
+		generate_piles(xd, yd, xe, ye, xc, yc, x4, y4, prof + 1, profMax);
 	}
 
 
 	void lisse(void)
 	{
+		int sizeWidow = 4;
+		memset(_MatriceHeightsTmp, 0x00, sizeof(int)*MAT_SIZE_CUBES*MAT_SIZE_CUBES);
+		for (int x = 0; x<MAT_SIZE_CUBES; x++)
+		{
+			for (int y = 0; y<MAT_SIZE_CUBES; y++)
+			{
+				//on moyenne sur une distance
+				int nb = 0;
+				for (int i = (x - sizeWidow < 0 ? 0 : x - sizeWidow);
+				i < (x + sizeWidow >= MAT_SIZE_CUBES ? MAT_SIZE_CUBES - 1 : x + sizeWidow); i++)
+				{
+					for (int j = (y - sizeWidow < 0 ? 0 : y - sizeWidow);
+					j <(y + sizeWidow >= MAT_SIZE_CUBES ? MAT_SIZE_CUBES - 1 : y + sizeWidow); j++)
+					{
+						_MatriceHeightsTmp[x][y] += _MatriceHeights[i][j];
+						nb++;
+					}
+				}
+				if (nb)
+					_MatriceHeightsTmp[x][y] /= nb;
+			}
+		}
+
+		//On reset les piles
+		for (int x = 0; x<MAT_SIZE_CUBES; x++)
+		{
+			for (int y = 0; y<MAT_SIZE_CUBES; y++)
+			{
+				load_pile(x, y, _MatriceHeightsTmp[x][y], false);
+			}
+		}
 
 	}
 
@@ -162,36 +297,8 @@ public :
 			MAT_SIZE_CUBES-1,MAT_SIZE_CUBES-1,
 			0,MAT_SIZE_CUBES-1,1,profmax);	
 
-		float freq = 0.04f;
-		float freq2 = 0.1f;
-
-		for (int x = 0; x < MAT_SIZE_CUBES; ++x)	
-			for (int y = 0; y < MAT_SIZE_CUBES; ++y)
-				for (int z = 0; z < MAT_HEIGHT_CUBES; ++z)
-				{
-					float val = 0;
-					if (z < MAT_HEIGHT_CUBES / 2) {
-						val = _Perlin.sample(x * freq, y * freq, z * freq);
-
-						val += _Perlin.sample(x * freq2, y * freq2, z * freq2);
-					}
-					else {
-						val = _Perlin.sample(x * freq, y * freq, z * freq * 2);
-						val *= 2;
-					}
-
-					if (val < 1) 
-					{
-						if (z == MAT_HEIGHT_CUBES - 1)
-						{
-							getCube(x, y, z)->_Type = CUBE_EAU;
-						}
-						else
-						{
-							getCube(x, y, z)->_Type = CUBE_TERRE;
-						}
-					}
-				}
+		lisse();
+		lisse();
 
 		for(int x=0;x<MAT_SIZE;x++)
 			for(int y=0;y<MAT_SIZE;y++)
