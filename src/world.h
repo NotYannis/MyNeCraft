@@ -14,7 +14,7 @@ typedef uint8 NYAxis;
 #define NY_AXIS_Y 0x02
 #define NY_AXIS_Z 0x04
 
-#define MAT_SIZE 4 //en nombre de chunks
+#define MAT_SIZE 8 //en nombre de chunks
 #define MAT_HEIGHT 4 //en nombre de chunks
 #define MAT_SIZE_CUBES (MAT_SIZE * NYChunk::CHUNK_SIZE)
 #define MAT_HEIGHT_CUBES (MAT_HEIGHT * NYChunk::CHUNK_SIZE)
@@ -33,7 +33,7 @@ public :
 	NYWorld()
 	{
 		_Perlin = NYPerlin();
-		_FacteurGeneration = 1.0;
+		_FacteurGeneration = 2.0;
 
 		//On crée les chunks
 		for(int x=0;x<MAT_SIZE;x++)
@@ -116,7 +116,7 @@ public :
 	void load_pile(int x, int y, int height, bool onlyIfZero = true)
 	{
 
-		if (height < 1)
+		if (height < 0)
 			height = 1;
 		if (height >= MAT_HEIGHT_CUBES)
 			height = MAT_HEIGHT_CUBES - 1;
@@ -124,16 +124,15 @@ public :
 		if (_MatriceHeights[x][y] != 0 && onlyIfZero)
 			return;
 
-		for (int z = 0; z<height; z++)
+
+
+		for (int z = 16; z<height; z++)
 		{
 			getCube(x, y, z)->_Draw = true;
-			if (z>0)
-				getCube(x, y, z)->_Type = CUBE_TERRE;
-			else
-				getCube(x, y, z)->_Type = CUBE_EAU;
+			getCube(x, y, z)->_Type = CUBE_TERRE;
 		}
 
-		if (height - 1>0)
+		if (height - 1>0 && getCube(x, y, height - 2)->_Type != CUBE_EAU)
 		{
 			getCube(x, y, height - 1)->_Draw = true;
 			getCube(x, y, height - 1)->_Type = CUBE_HERBE;
@@ -143,6 +142,11 @@ public :
 		{
 			getCube(x, y, z)->_Draw = true;
 			getCube(x, y, z)->_Type = CUBE_AIR;
+		}
+
+		for (int z = 0; z < 25; z++) {
+			getCube(x, y, z)->_Draw = true;
+			getCube(x, y, z)->_Type = CUBE_EAU;
 		}
 
 		_MatriceHeights[x][y] = height;

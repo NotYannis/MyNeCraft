@@ -98,7 +98,7 @@ void renderObjects(void)
 {
 	
 	//Rendu des axes
-	glDisable(GL_LIGHTING);
+	/*glDisable(GL_LIGHTING);
 
 	glBegin(GL_LINES);
 	glColor3d(1,0,0);
@@ -116,7 +116,7 @@ void renderObjects(void)
 	glColor3d(1, 0, 0);
 	//glVertex3d(g_renderer->_Camera->_Position.X - g_renderer->_Camera->_Direction.X - 0.01, g_renderer->_Camera->_Position.Y - g_renderer->_Camera->_Direction.Y, g_renderer->_Camera->_Position.Z - g_renderer->_Camera->_Direction.Z);
 	//glVertex3d(g_renderer->_Camera->_Direction.X * 2, g_renderer->_Camera->_Direction.Y * 2, g_renderer->_Camera->_Direction.Z * 2);
-	glEnd();
+	glEnd();*/
 
 	//On desactive le back face culling
 	glDisable(GL_CULL_FACE);

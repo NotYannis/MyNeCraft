@@ -13,11 +13,8 @@ void createWave(){
 	gl_Position = gl_ModelViewMatrix * gl_Vertex;
 	gl_Position = invertView * gl_Position;
 
-	//Couleur
-	color = gl_Color;
-
 	float dist = sqrt(gl_Position.x * gl_Position.x + gl_Position.y * gl_Position.y);
-	float phase = elapsed * 0.4;
+	float phase = elapsed;
 
 	normal = gl_NormalMatrix * gl_Normal;
 
@@ -33,11 +30,17 @@ void createWave(){
 
 void main()
 {
-	createWave();
-	
-	gl_TexCoord[1] = gl_MultiTexCoord0;
-	gl_Position = ftransform();
-	
+	// Transforming The Vertex
+	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+
+	// Transforming The Normal To ModelView-Space
+	normal = gl_NormalMatrix * gl_Normal; 
+
 	//Direction lumiere
 	vertex_to_light_vector = vec3(gl_LightSource[0].position);
+
+	//Couleur
+	color = gl_Color;
+
+	createWave();
 }

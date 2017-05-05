@@ -486,7 +486,7 @@ class NYChunk
 			NYCube * cubeXNext = NULL; 
 			NYCube * cubeYPrev = NULL; 
 			NYCube * cubeYNext = NULL; 
-			NYCube * cubeZPrev = NULL; 
+			NYCube * cubeZPrev = NULL;
 			NYCube * cubeZNext = NULL; 
 
 			if(x == 0 && Voisins[0] != NULL)
